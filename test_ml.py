@@ -57,7 +57,7 @@ ML_STATUS_TOPIC = 'synergy/ml/status'
 
 # Scaler features: [temperature, humidity, co2, hour, feature4(0), feature5(0/1)]
 # The model was trained with 6 features. Feature 4 is always 0, feature 5 is binary.
-NUM_FEATURES = 6
+NUM_FEATURES = 7 # jadi 7
 SEQUENCE_LENGTH = 60  # Number of timesteps for LSTM input (60 minutes of 1-min data)
 
 # ============================================================================
@@ -135,16 +135,22 @@ def prepare_input(sequence, current_hour=None):
     if current_hour is None:
         current_hour = datetime.now().hour
 
-    # Build feature array: [temp, humidity, co2, hour, 0, 0]
+    # Build feature array: [temp, humidity, co2, hour_sin, hour_cos, kipas, dehumidifier]
     raw_data = []
+    
+    # Hitung nilai cyclical encoding untuk jam saat ini
+    hour_sin = np.sin(2 * np.pi * current_hour / 24.0)
+    hour_cos = np.cos(2 * np.pi * current_hour / 24.0)
+
     for i, reading in enumerate(sequence):
         row = [
-            float(reading['temperature']),
-            float(reading['humidity']),
-            float(reading['co2']),
-            float(current_hour),
-            0.0,  # Feature 4 (always 0 in training data)
-            0.0   # Feature 5 (default 0, binary flag)
+            float(reading['temperature']), # 1. Suhu
+            float(reading['humidity']),    # 2. Kelembapan
+            float(reading['co2']),         # 3. CO2
+            float(hour_sin),               # 4. hour_sin
+            float(hour_cos),               # 5. hour_cos
+            0.0,                           # 6. status_kipas (default OFF)
+            0.0                            # 7. status_dehumidifier (default OFF)
         ]
         raw_data.append(row)
 
