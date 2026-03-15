@@ -364,9 +364,9 @@ def graceful_shutdown(signum, frame):
     # Publish offline status before disconnecting
     if mqtt_client and mqtt_client.is_connected():
         #mqtt_client.publish(ML_STATUS_TOPIC, json.dumps({
-            'status': 'offline',
-            'timestamp': datetime.now().isoformat()
-        }), qos=1, retain=True)
+        #    'status': 'offline',
+        #    'timestamp': datetime.now().isoformat()
+        #}), qos=1, retain=True)
         mqtt_client.disconnect()
     sys.exit(0)
 
@@ -399,12 +399,12 @@ if __name__ == '__main__':
     mqtt_client.tls_set(tls_version=ssl.PROTOCOL_TLS)
 
     # Last Will and Testament — broker publishes this if we disconnect unexpectedly
-    lwt_payload = json.dumps({
-        'status': 'offline',
-        'reason': 'unexpected_disconnect',
-        'timestamp': datetime.now().isoformat()
-    })
-    mqtt_client.will_set(ML_STATUS_TOPIC, lwt_payload, qos=1, retain=True)
+    #lwt_payload = json.dumps({
+    #    'status': 'offline',
+    #    'reason': 'unexpected_disconnect',
+    #    'timestamp': datetime.now().isoformat()
+    #})
+    #mqtt_client.will_set(ML_STATUS_TOPIC, lwt_payload, qos=1, retain=True)
 
     # Register callbacks
     mqtt_client.on_connect = on_connect
