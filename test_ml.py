@@ -79,7 +79,7 @@ MQTT_HOST = os.environ.get('MQTT_HOST', 'mfe19520.ala.asia-southeast1.emqxsl.com
 MQTT_PORT = int(os.environ.get('MQTT_PORT', '8883'))
 MQTT_USERNAME = os.environ.get('MQTT_USERNAME', 'backend-subscriber')
 MQTT_PASSWORD = os.environ.get('MQTT_PASSWORD', 'Zufar123')
-MQTT_CLIENT_ID = os.environ.get('MQTT_CLIENT_ID', 'synergy-ml-server')
+MQTT_CLIENT_ID = os.environ.get('MQTT_CLIENT_ID', 'synergy-ml-server-v3-testing')
 
 # MQTT Topics
 PREDICT_REQUEST_TOPIC = 'synergy/ml/predict/request'
