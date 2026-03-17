@@ -28,12 +28,25 @@ import numpy as np
 import joblib
 import paho.mqtt.client as paho_mqtt
 import tensorflow as tf
+from keras.layers import Dense as _OriginalDense
 
 # Suppress warnings
 warnings.filterwarnings('ignore', category=UserWarning)
 
 # ============================================================================
-# Logging  (ini yang sebelumnya TIDAK ADA → menyebabkan NameError crash)
+# Patch untuk Keras Version Mismatch
+# ============================================================================
+# Model disimpan di Colab (Keras baru) yang menyimpan 'quantization_config'
+# di config Dense layer. Tapi Keras di VM lebih lama dan tidak mengenal
+# parameter itu → error saat load. PatchedDense membuang parameter tsb.
+
+class PatchedDense(_OriginalDense):
+    def __init__(self, **kwargs):
+        kwargs.pop('quantization_config', None)
+        super().__init__(**kwargs)
+
+# ============================================================================
+# Logging
 # ============================================================================
 logging.basicConfig(
     level=logging.INFO,
@@ -97,9 +110,13 @@ def load_model_and_scaler():
     logger.info(f'  Data max: {scaler.data_max_}')
 
     # --- Load Model ---
-    # Tidak perlu PatchedDense — model .keras dari training standar tidak butuh patch
+    # Gunakan PatchedDense untuk menangani 'quantization_config' dari Keras baru
     logger.info(f'Loading LSTM model from: {MODEL_PATH}')
-    model = tf.keras.models.load_model(MODEL_PATH, compile=False)
+    model = tf.keras.models.load_model(
+        MODEL_PATH,
+        custom_objects={'Dense': PatchedDense},
+        compile=False
+    )
     logger.info(f'✅ Model loaded successfully!')
 
     if hasattr(model, 'input_shape'):
