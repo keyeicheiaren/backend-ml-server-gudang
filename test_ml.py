@@ -34,11 +34,11 @@ warnings.filterwarnings('ignore', category=UserWarning)
 
 MODEL_PATH = os.environ.get(
     'MODEL_PATH',
-    os.path.join(os.path.dirname(__file__), 'model', 'model_v2.keras')
+    os.path.join(os.path.dirname(__file__), 'model', 'model_v3.h5')
 )
 SCALER_PATH = os.environ.get(
     'SCALER_PATH',
-    os.path.join(os.path.dirname(__file__), 'model', 'scaler_v2')
+    os.path.join(os.path.dirname(__file__), 'model', 'scaler_v3')
 )
 
 # MQTT Broker
