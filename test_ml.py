@@ -53,7 +53,7 @@ MODEL_PATH = os.environ.get(
 )
 SCALER_PATH = os.environ.get(
     'SCALER_PATH',
-    os.path.join(os.path.dirname(__file__), 'model', 'scaler_v3.gz')
+    os.path.join(os.path.dirname(__file__), 'model', 'scaler_v3')
 )
 
 # MQTT Broker
