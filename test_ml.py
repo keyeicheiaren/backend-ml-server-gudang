@@ -38,7 +38,7 @@ MODEL_PATH = os.environ.get(
 )
 SCALER_PATH = os.environ.get(
     'SCALER_PATH',
-    os.path.join(os.path.dirname(__file__), 'model', 'scaler_v3')
+    os.path.join(os.path.dirname(__file__), 'model', 'scaler_v3.gz')
 )
 
 # MQTT Broker
@@ -58,7 +58,7 @@ ML_STATUS_TOPIC = 'synergy/ml/status'
 # Scaler features: [temperature, humidity, co2, hour, feature4(0), feature5(0/1)]
 # The model was trained with 6 features. Feature 4 is always 0, feature 5 is binary.
 NUM_FEATURES = 7 # jadi 7
-SEQUENCE_LENGTH = 60  # Number of timesteps for LSTM input (60 minutes of 1-min data)
+SEQUENCE_LENGTH = 240  # Number of timesteps for LSTM input (60 minutes of 15-sec data)
 
 # ============================================================================
 # Logging
@@ -120,33 +120,23 @@ def load_model_and_scaler():
 # ML Helpers
 # ============================================================================
 
+def prepare_input(sequence, current_hour_frac=None):
+    if current_hour_frac is None:
+        now = datetime.now()
+        # Menghitung jam desimal (14:30 menjadi 14.5)
+        current_hour_frac = now.hour + (now.minute / 60.0) + (now.second / 3600.0)
 
-def prepare_input(sequence, current_hour=None):
-    """
-    Prepare input sequence for the LSTM model.
-
-    Args:
-        sequence: list of dicts with keys: temperature, humidity, co2
-        current_hour: hour of day (0-23), defaults to current hour
-
-    Returns:
-        numpy array shaped (1, SEQUENCE_LENGTH, NUM_FEATURES) - scaled
-    """
-    if current_hour is None:
-        current_hour = datetime.now().hour
+    # Hitung cyclical encoding untuk jam saat ini
+    hour_sin = np.sin(2 * np.pi * current_hour_frac / 24.0)
+    hour_cos = np.cos(2 * np.pi * current_hour_frac / 24.0)
 
     # Build feature array: [temp, humidity, co2, hour_sin, hour_cos, kipas, dehumidifier]
     raw_data = []
-    
-    # Hitung nilai cyclical encoding untuk jam saat ini
-    hour_sin = np.sin(2 * np.pi * current_hour / 24.0)
-    hour_cos = np.cos(2 * np.pi * current_hour / 24.0)
-
-    for i, reading in enumerate(sequence):
+    for reading in sequence:
         row = [
-            float(reading['temperature']), # 1. Suhu
-            float(reading['humidity']),    # 2. Kelembapan
-            float(reading['co2']),         # 3. CO2
+            float(reading['temperature']), # 1. suhu
+            float(reading['humidity']),    # 2. kelembapan
+            float(reading['co2']),         # 3. co2
             float(hour_sin),               # 4. hour_sin
             float(hour_cos),               # 5. hour_cos
             0.0,                           # 6. status_kipas (default OFF)
@@ -155,10 +145,8 @@ def prepare_input(sequence, current_hour=None):
         raw_data.append(row)
 
     raw_array = np.array(raw_data, dtype=np.float32)
-
     # Scale using the fitted MinMaxScaler
     scaled = scaler.transform(raw_array)
-
     # Reshape for LSTM: (1, timesteps, features)
     return scaled.reshape(1, SEQUENCE_LENGTH, NUM_FEATURES)
 
