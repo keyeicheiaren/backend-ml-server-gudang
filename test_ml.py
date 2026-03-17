@@ -24,9 +24,14 @@ os.environ.setdefault('KERAS_BACKEND', 'tensorflow')
 import numpy as np
 import joblib
 import paho.mqtt.client as paho_mqtt
+import tensorflow as tf
+import keras
+from keras.layers import Dense
 
-# Suppress sklearn version warnings
-warnings.filterwarnings('ignore', category=UserWarning)
+class PatchedDense(Dense):
+    def __init__(self, **kwargs):
+        kwargs.pop('quantization_config', None) # Buang parameter penyebab error
+        super().__init__(**kwargs)
 
 # ============================================================================
 # Configuration
@@ -61,16 +66,6 @@ NUM_FEATURES = 7 # jadi 7
 SEQUENCE_LENGTH = 240  # Number of timesteps for LSTM input (60 minutes of 15-sec data)
 
 # ============================================================================
-# Logging
-# ============================================================================
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s'
-)
-logger = logging.getLogger(__name__)
-
-# ============================================================================
 # Load Model & Scaler
 # ============================================================================
 
@@ -79,35 +74,22 @@ scaler = None
 
 
 def load_model_and_scaler():
-    """Load the LSTM model and MinMaxScaler at startup."""
     global model, scaler
-
-    logger.info(f'Loading scaler from: {SCALER_PATH}')
-    scaler = joblib.load(SCALER_PATH)
-    logger.info(f'Scaler loaded. Features: {scaler.n_features_in_}')
-    logger.info(f'  Data min: {scaler.data_min_}')
-    logger.info(f'  Data max: {scaler.data_max_}')
-
-    logger.info(f'Loading LSTM model from: {MODEL_PATH}')
-
-    # Try tensorflow first, fall back to keras
     try:
-        import tensorflow as tf
-        model = tf.keras.models.load_model(MODEL_PATH, compile=False)
-        logger.info('Model loaded successfully with TensorFlow')
+        # Load Scaler
+        scaler = joblib.load(SCALER_PATH)
+        print(f"✅ Scaler loaded. Features: {scaler.n_features_in_}")
+        
+        # Load Model dengan Custom Objects untuk menambal bug Dense
+        model = tf.keras.models.load_model(
+            MODEL_PATH, 
+            custom_objects={'Dense': PatchedDense}, 
+            compile=False
+        )
+        print("✅ Model V3 loaded successfully with Patch!")
     except Exception as e:
-        logger.error(f' Gagal muat model: {e}')
-        # Jika gagal, coba gunakan keras langsung
-        import keras
-        model = keras.models.load_model(MODEL_PATH, compile=False)
-
-    # Log model info
-    if hasattr(model, 'input_shape'):
-        logger.info(f'  Input shape: {model.input_shape}')
-    if hasattr(model, 'output_shape'):
-        logger.info(f'  Output shape: {model.output_shape}')
-
-    logger.info('Model and scaler loaded successfully!')
+        print(f"❌ Masih gagal muat model: {e}")
+        raise
 
 
 # ============================================================================
