@@ -28,7 +28,6 @@ import numpy as np
 import joblib
 import paho.mqtt.client as paho_mqtt
 import tensorflow as tf
-from keras.layers import Dense as _OriginalDense
 
 # Suppress warnings
 warnings.filterwarnings('ignore', category=UserWarning)
@@ -38,12 +37,18 @@ warnings.filterwarnings('ignore', category=UserWarning)
 # ============================================================================
 # Model disimpan di Colab (Keras baru) yang menyimpan 'quantization_config'
 # di config Dense layer. Tapi Keras di VM lebih lama dan tidak mengenal
-# parameter itu → error saat load. PatchedDense membuang parameter tsb.
+# parameter itu → crash saat load_model.
+#
+# Solusi: monkey-patch Dense.__init__ LANGSUNG agar membuang parameter tsb.
+# Ini bekerja karena Keras deserializer menggunakan class Dense yang sama.
+import keras.layers
+_original_dense_init = keras.layers.Dense.__init__
 
-class PatchedDense(_OriginalDense):
-    def __init__(self, **kwargs):
-        kwargs.pop('quantization_config', None)
-        super().__init__(**kwargs)
+def _patched_dense_init(self, *args, **kwargs):
+    kwargs.pop('quantization_config', None)
+    _original_dense_init(self, *args, **kwargs)
+
+keras.layers.Dense.__init__ = _patched_dense_init
 
 # ============================================================================
 # Logging
@@ -110,13 +115,8 @@ def load_model_and_scaler():
     logger.info(f'  Data max: {scaler.data_max_}')
 
     # --- Load Model ---
-    # Gunakan PatchedDense untuk menangani 'quantization_config' dari Keras baru
     logger.info(f'Loading LSTM model from: {MODEL_PATH}')
-    model = tf.keras.models.load_model(
-        MODEL_PATH,
-        custom_objects={'Dense': PatchedDense},
-        compile=False
-    )
+    model = tf.keras.models.load_model(MODEL_PATH, compile=False)
     logger.info(f'✅ Model loaded successfully!')
 
     if hasattr(model, 'input_shape'):
