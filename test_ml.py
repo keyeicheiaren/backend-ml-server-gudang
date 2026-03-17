@@ -18,8 +18,8 @@ import logging
 import ssl
 from datetime import datetime
 
-# Set Keras backend to JAX (TensorFlow doesn't support Python 3.14+)
-os.environ.setdefault('KERAS_BACKEND', 'jax')
+# //(gak dipake lagi)Set Keras backend to JAX (TensorFlow doesn't support Python 3.14+)
+os.environ.setdefault('KERAS_BACKEND', 'tensorflow')
 
 import numpy as np
 import joblib
@@ -94,18 +94,12 @@ def load_model_and_scaler():
     try:
         import tensorflow as tf
         model = tf.keras.models.load_model(MODEL_PATH, compile=False)
-        logger.info('Model loaded with TensorFlow/Keras')
-    except ImportError:
-        try:
-            import keras
-            model = keras.models.load_model(MODEL_PATH, compile=False)
-            logger.info('Model loaded with standalone Keras (JAX backend)')
-        except ImportError:
-            logger.error(
-                'Neither tensorflow nor keras is installed! '
-                'Install with: pip install tensorflow or pip install keras'
-            )
-            raise
+        logger.info('Model loaded successfully with TensorFlow')
+    except Exception as e:
+        logger.error(f' Gagal muat model: {e}')
+        # Jika gagal, coba gunakan keras langsung
+        import keras
+        model = keras.models.load_model(MODEL_PATH, compile=False)
 
     # Log model info
     if hasattr(model, 'input_shape'):
