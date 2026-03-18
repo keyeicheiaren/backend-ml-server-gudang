@@ -24,10 +24,12 @@ import logging
 import ssl
 from datetime import datetime, timedelta
 
+# Set Keras backend to JAX (TensorFlow doesn't support Python 3.14+)
+os.environ.setdefault('KERAS_BACKEND', 'jax')
+
 import numpy as np
 import joblib
 import paho.mqtt.client as paho_mqtt
-import tensorflow as tf
 
 # Suppress warnings
 warnings.filterwarnings('ignore', category=UserWarning)
@@ -116,7 +118,24 @@ def load_model_and_scaler():
 
     # --- Load Model ---
     logger.info(f'Loading LSTM model from: {MODEL_PATH}')
-    model = tf.keras.models.load_model(MODEL_PATH, compile=False)
+
+    # Try tensorflow first, fall back to keras
+    try:
+        import tensorflow as tf
+        model = tf.keras.models.load_model(MODEL_PATH, compile=False)
+        logger.info('Model loaded with TensorFlow/Keras')
+    except ImportError:
+        try:
+            import keras
+            model = keras.models.load_model(MODEL_PATH, compile=False)
+            logger.info('Model loaded with standalone Keras (JAX backend)')
+        except ImportError:
+            logger.error(
+                'Neither tensorflow nor keras is installed! '
+                'Install with: pip install tensorflow or pip install keras'
+            )
+            raise
+
     logger.info(f'✅ Model loaded successfully!')
 
     if hasattr(model, 'input_shape'):
