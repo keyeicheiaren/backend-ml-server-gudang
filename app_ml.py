@@ -174,7 +174,8 @@ def prepare_input(sequence):
         # --- Hitung hour_sin & hour_cos per-reading ---
         if 'timestamp' in reading:
             # Jika ada timestamp di payload, gunakan itu
-            ts = datetime.fromisoformat(reading['timestamp'])
+            ts_str = reading['timestamp'].replace('Z', '+00:00')
+            ts = datetime.fromisoformat(ts_str)
         else:
             # Fallback: asumsikan reading terakhir = sekarang,
             # yang sebelumnya mundur per SAMPLING_INTERVAL_SEC
